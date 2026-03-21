@@ -60,13 +60,14 @@ export function createListCommand() {
 
       const output = table(rows, [
         { key: 'id', header: 'ID', width: 12, format: (v) => String(v).slice(0, 8) },
-        { key: 'display_name', header: 'NAME', width: 20, format: (v) => String(v || '') },
+        { key: 'display_name', header: 'NAME', width: 24, format: (v) => String(v || '') },
         {
-          key: 'workspace_id',
-          header: 'WORKSPACE',
-          width: 12,
-          format: (v) => String(v).slice(0, 8),
+          key: 'document_count',
+          header: 'DOCS',
+          width: 6,
+          format: (v) => (v != null ? String(v) : '—'),
         },
+        { key: 'visibility', header: 'VISIBILITY', width: 12, format: (v) => String(v || '—') },
       ]);
 
       console.log(output);

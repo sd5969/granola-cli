@@ -55,12 +55,19 @@ export interface DocumentList {
   id: string;
   title?: string;
   name?: string;
-  workspace_id: string;
-  owner_id: string;
+  workspace_id?: string;
+  owner_id?: string;
   created_at: string;
-  is_favourite: boolean;
+  is_favourite?: boolean;
+  is_favourited?: boolean;
   documents?: DocumentListDocument[];
   document_ids?: string[];
+  document_count?: number;
+  visibility?: string;
+}
+
+export interface DocumentListsResponse {
+  lists: DocumentList[];
 }
 
 export interface WorkspaceEntry {
@@ -129,7 +136,8 @@ export function createApiClient(httpClient: HttpClient): GranolaApi {
   }
 
   async function getDocumentLists(): Promise<DocumentList[]> {
-    return httpClient.post<DocumentList[]>('/v2/get-document-lists', {});
+    const raw = await httpClient.post<DocumentListsResponse>('/v2/get-document-lists', {});
+    return raw.lists ?? [];
   }
 
   async function getDocumentList(folderId: string): Promise<DocumentList | null> {
