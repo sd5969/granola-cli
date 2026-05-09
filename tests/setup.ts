@@ -27,9 +27,11 @@ vi.mock('open', () => ({
 export function captureConsole() {
   const logs: string[] = [];
   const errors: string[] = [];
+  const warnings: string[] = [];
 
   const originalLog = console.log;
   const originalError = console.error;
+  const originalWarn = console.warn;
 
   console.log = (...args: unknown[]) => {
     logs.push(args.map(String).join(' '));
@@ -39,12 +41,18 @@ export function captureConsole() {
     errors.push(args.map(String).join(' '));
   };
 
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args.map(String).join(' '));
+  };
+
   return {
     logs,
     errors,
+    warnings,
     restore: () => {
       console.log = originalLog;
       console.error = originalError;
+      console.warn = originalWarn;
     },
   };
 }

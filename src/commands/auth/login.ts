@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import {
   getDefaultSupabasePath,
   loadCredentialsFromFile,
+  refreshAccessToken,
   saveCredentials,
 } from '../../lib/auth.js';
 import { createGranolaDebug } from '../../lib/debug.js';
@@ -35,8 +36,18 @@ export function createLoginCommand() {
 
       debug('credentials loaded, saving to keychain');
       await saveCredentials(creds);
-      debug('login successful');
-      console.log(chalk.green('Credentials imported successfully'));
+      debug('verifying credentials via token refresh');
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        debug('login successful');
+        console.log(chalk.green('Credentials imported successfully'));
+      } else {
+        debug('token refresh failed, credentials may be stale');
+        console.warn(
+          chalk.yellow('Warning:'),
+          'Could not verify credentials. If you see auth errors, ensure Granola is running and re-run `granola auth login`.',
+        );
+      }
     });
 }
 

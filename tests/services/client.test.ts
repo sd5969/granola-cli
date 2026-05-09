@@ -138,13 +138,15 @@ describe('client service', () => {
       expect(auth.refreshAccessToken).toHaveBeenCalledTimes(1);
     });
 
-    it('should throw original error when refresh fails after 401', async () => {
+    it('should throw helpful error when refresh fails after 401', async () => {
       const error401 = { status: 401, message: 'Unauthorized' };
       const mockOperation = vi.fn().mockRejectedValue(error401);
 
       vi.mocked(auth.refreshAccessToken).mockResolvedValue(null);
 
-      await expect(withTokenRefresh(mockOperation)).rejects.toEqual(error401);
+      await expect(withTokenRefresh(mockOperation)).rejects.toThrow(
+        'Session expired. Run `granola auth login` to re-authenticate.',
+      );
       expect(mockOperation).toHaveBeenCalledTimes(1);
       expect(auth.refreshAccessToken).toHaveBeenCalledTimes(1);
     });

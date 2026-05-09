@@ -1,5 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { homedir, platform } from 'node:os';
+import { homedir, platform, release } from 'node:os';
 import { join } from 'node:path';
 import { deletePassword, getPassword, setPassword } from 'cross-keychain';
 import type { Credentials } from '../types.js';
@@ -46,36 +47,52 @@ export async function deleteCredentials(): Promise<void> {
   debug('credentials deleted');
 }
 
-const WORKOS_AUTH_URL = 'https://api.workos.com/user_management/authenticate';
+const GRANOLA_REFRESH_URL = 'https://api.granola.ai/v1/refresh-access-token';
+const APP_VERSION = '7.0.0';
 
-/**
- * Refreshes the access token using the stored refresh token.
- * WorkOS refresh tokens are single-use - each refresh returns a new refresh token
- * that must be saved immediately.
- *
- * Uses a file-based lock to prevent race conditions when multiple CLI processes
- * attempt to refresh the token simultaneously.
- *
- * @returns New credentials if refresh succeeds, null otherwise
- */
+function getPackageVersion(): string {
+  for (const path of ['../package.json', '../../package.json']) {
+    try {
+      const pkg = JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf-8'));
+      return pkg.version;
+    } catch {}
+  }
+  return '0.0.0';
+}
+
+const cliVersion = getPackageVersion();
+
+function getRefreshClientHeaders(): Record<string, string> {
+  const osPlatform = process.platform === 'darwin' ? 'macOS' : process.platform;
+  return {
+    'X-App-Version': APP_VERSION,
+    'X-Client-Version': APP_VERSION,
+    'X-Client-Type': 'cli',
+    'X-Client-Platform': process.platform,
+    'X-Client-Architecture': process.arch,
+    'X-Client-Id': `granola-cli-${cliVersion}`,
+    'User-Agent': `Granola/${APP_VERSION} granola-cli/${cliVersion} (${osPlatform} ${release()})`,
+  };
+}
+
 export async function refreshAccessToken(): Promise<Credentials | null> {
   debug('attempting token refresh');
 
   try {
     return await withLock(async () => {
-      // Re-read credentials inside the lock - another process may have updated them
       const creds = await getCredentials();
-      if (!creds?.refreshToken || !creds?.clientId) {
-        debug('cannot refresh: missing refreshToken or clientId');
+      if (!creds?.refreshToken) {
+        debug('cannot refresh: missing refreshToken');
         return null;
       }
 
-      const response = await fetch(WORKOS_AUTH_URL, {
+      const response = await fetch(GRANOLA_REFRESH_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getRefreshClientHeaders(),
+        },
         body: JSON.stringify({
-          client_id: creds.clientId,
-          grant_type: 'refresh_token',
           refresh_token: creds.refreshToken,
         }),
       });

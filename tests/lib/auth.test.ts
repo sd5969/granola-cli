@@ -12,6 +12,7 @@ vi.mock('cross-keychain', () => ({
 vi.mock('node:os', () => ({
   homedir: vi.fn(() => '/home/testuser'),
   platform: vi.fn(() => 'linux'),
+  release: vi.fn(() => '20.0.0'),
 }));
 
 // Mock node:fs/promises for file-based credential tests
@@ -436,13 +437,15 @@ describe('auth', () => {
       const result = await refreshAccessToken();
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.workos.com/user_management/authenticate',
+        'https://api.granola.ai/v1/refresh-access-token',
         expect.objectContaining({
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'X-App-Version': '7.0.0',
+            'X-Client-Type': 'cli',
+          }),
           body: JSON.stringify({
-            client_id: 'test-client-id',
-            grant_type: 'refresh_token',
             refresh_token: 'old-refresh-token',
           }),
         }),
@@ -487,20 +490,7 @@ describe('auth', () => {
       expect(mockFetch).not.toHaveBeenCalled();
     });
 
-    it('should return null when missing clientId', async () => {
-      const storedCreds = JSON.stringify({
-        refreshToken: 'old-refresh-token',
-        accessToken: 'old-access-token',
-      });
-      vi.mocked(crossKeychain.getPassword).mockResolvedValue(storedCreds);
-
-      const result = await refreshAccessToken();
-
-      expect(result).toBeNull();
-      expect(mockFetch).not.toHaveBeenCalled();
-    });
-
-    it('should return null when WorkOS returns error', async () => {
+    it('should return null when Granola refresh endpoint returns error', async () => {
       const storedCreds = JSON.stringify({
         refreshToken: 'old-refresh-token',
         accessToken: 'old-access-token',

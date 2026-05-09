@@ -54,8 +54,8 @@ export async function withTokenRefresh<T>(operation: () => Promise<T>): Promise<
 
       const newCreds = await refreshAccessToken();
       if (!newCreds) {
-        debug('token refresh failed, re-throwing original error');
-        throw error;
+        debug('token refresh failed');
+        throw new Error('Session expired. Run `granola auth login` to re-authenticate.');
       }
 
       resetClient();

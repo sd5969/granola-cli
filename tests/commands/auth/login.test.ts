@@ -6,6 +6,7 @@ import { captureConsole } from '../../setup.js';
 vi.mock('../../../src/lib/auth.js', () => ({
   saveCredentials: vi.fn(),
   loadCredentialsFromFile: vi.fn(),
+  refreshAccessToken: vi.fn(),
   getDefaultSupabasePath: vi.fn(() => '/mock/path/supabase.json'),
 }));
 
@@ -29,23 +30,32 @@ describe('login command', () => {
   });
 
   it('should import credentials from desktop app', async () => {
-    vi.mocked(auth.loadCredentialsFromFile).mockResolvedValue({
-      refreshToken: 'token',
-      accessToken: 'access',
-      clientId: 'client',
-    });
+    const mockCreds = { refreshToken: 'token', accessToken: 'access', clientId: 'client' };
+    vi.mocked(auth.loadCredentialsFromFile).mockResolvedValue(mockCreds);
+    vi.mocked(auth.refreshAccessToken).mockResolvedValue(mockCreds);
 
     const program = new Command();
     program.addCommand(createLoginCommand());
     await program.parseAsync(['node', 'test', 'login']);
 
     expect(auth.loadCredentialsFromFile).toHaveBeenCalled();
-    expect(auth.saveCredentials).toHaveBeenCalledWith({
-      refreshToken: 'token',
-      accessToken: 'access',
-      clientId: 'client',
-    });
+    expect(auth.saveCredentials).toHaveBeenCalledWith(mockCreds);
+    expect(auth.refreshAccessToken).toHaveBeenCalled();
     expect(console_.logs.some((log) => /Credentials imported/i.test(log))).toBe(true);
+  });
+
+  it('should warn when token refresh fails after import', async () => {
+    const mockCreds = { refreshToken: 'token', accessToken: 'access', clientId: 'client' };
+    vi.mocked(auth.loadCredentialsFromFile).mockResolvedValue(mockCreds);
+    vi.mocked(auth.refreshAccessToken).mockResolvedValue(null);
+
+    const program = new Command();
+    program.addCommand(createLoginCommand());
+    await program.parseAsync(['node', 'test', 'login']);
+
+    expect(auth.saveCredentials).toHaveBeenCalledWith(mockCreds);
+    expect(auth.refreshAccessToken).toHaveBeenCalled();
+    expect(console_.warnings.some((log) => /Could not verify credentials/i.test(log))).toBe(true);
   });
 
   it('should exit with code 1 when credentials not found', async () => {
