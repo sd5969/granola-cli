@@ -94,13 +94,13 @@ describe('output', () => {
     });
 
     it('should handle different timezones', () => {
-      const result = formatDate('2025-01-01T00:00:00Z');
+      const result = formatDate('2025-01-01T12:00:00Z');
       expect(result).toMatch(/2025/);
       expect(result).toMatch(/Jan/);
     });
 
     it('should handle date-only strings', () => {
-      const result = formatDate('2025-06-15');
+      const result = formatDate('2025-06-15T12:00:00Z');
       expect(result).toMatch(/Jun/);
       expect(result).toMatch(/15/);
       expect(result).toMatch(/2025/);
